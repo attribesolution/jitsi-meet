@@ -2,6 +2,7 @@ var Base64=(function(){var keyStr="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrs
 function TraceablePeerConnection(ice_config, constraints) {
     var self = this;
     var RTCPeerconnection = navigator.mozGetUserMedia ? mozRTCPeerConnection : webkitRTCPeerConnection;
+    constraints = {optional:[{googIPv6: true}]}
     this.peerconnection = new RTCPeerconnection(ice_config, constraints);
     this.updateLog = [];
     this.stats = {};

@@ -31,7 +31,7 @@ html, body{
 }
 
 .videocontainer>span {
-    display: none; /* enable when you want nicks to be shown */
+    /*display: none; *//* enable when you want nicks to be shown */
     position: absolute;
     left: 0px;
     bottom: -20px;
@@ -47,8 +47,12 @@ html, body{
     transform: scaleX(-1);
 }
 
+#largeVideocontainer {
+    display:none;
+}
+
 #remoteVideos {
-    display:block;
+    display:none;
     position:relative;
     text-align:center;
     height:196px;
@@ -142,7 +146,7 @@ html, body{
     width: 95%;
 }
 
-#nickinput {
+#displaynameinput {
     margin-top: 20px;
     font-size: 14;
 }
@@ -374,4 +378,47 @@ form {
     -webkit-border-radius: 5px;
     -webkit-background-clip: padding-box;
     z-index: 2;
+}
+
+#haircheck {
+    position: relative;
+    width:640px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#camholder {
+    position:relative;
+    width:100%;
+    height:360px;
+}
+
+#haircheckVideo {
+    position:absolute;
+    width:100%;
+    height:100%;
+}
+
+#camholder img {
+    position:absolute;
+    display:none;
+}
+
+#loudness_container {
+    width:90%;
+    height:10px;
+    margin-left:auto;
+    margin-right:auto;
+}
+#loudness {
+    width:0px;
+    height:10px;
+}
+
+#nickform input {
+    width:75%;
+}
+
+#nickform button {
+    width:20%;
 }

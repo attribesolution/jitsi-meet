@@ -10,6 +10,7 @@ var roomUrl = null;
 var ssrc2jid = {};
 var localVideoSrc = null;
 var preziPlayer = null;
+var speechEvents = null;
 
 /* window.onbeforeunload = closePageWarning; */
 
@@ -43,19 +44,87 @@ function init() {
             if (config.useStunTurn) {
                 connection.jingle.getStunAndTurnCredentials();
             }
-            if (RTC.browser == 'firefox') {
-                getUserMediaWithConstraints(['audio']);
-            } else {
-                getUserMediaWithConstraints(['audio', 'video'], '360');
-            }
+            getDevices();
             document.getElementById('connect').disabled = true;
         } else {
             console.log('status', status);
         }
     });
+    initHaircheck();
 }
 
-function doJoin() {
+function getDevices() {
+    var cons = {};
+    var selected_mic = localStorage.getItem('settings:microphone');
+    var selected_cam = localStorage.getItem('settings:camera');
+    cons.audio = selected_mic == null ? true : {optional:[{sourceId: selected_mic}]};
+    if (RTC.browser == 'chrome') {
+        // ignore firefox for now, audio-only is more feasible there
+        // FIXME: get resolution from config
+        cons.video = {mandatory: {minWidth: 640, minHeight: 360, minAspectRatio: 1.77}};
+        if (selected_cam != null) {
+            cons.video.optional = [{sourceId: selected_cam}];
+        }
+    }
+    navigator.webkitGetUserMedia(cons, 
+        function(stream) {
+            $(document).trigger('mediaready.jingle', [stream]);
+        },
+        function(error) {
+            $(document).trigger('mediafailure.jingle', [error]);
+        }
+    );
+}
+
+// FIXME: rewrite as a strophe plugin
+//      which also creates HTML dynamically?
+function initHaircheck() {
+    var selected_mic = localStorage.getItem('settings:microphone');
+    var selected_cam = localStorage.getItem('settings:camera');
+    $('#nickinput').val(localStorage.getItem('settings:displayname'));
+    if (window.MediaStreamTrack) {
+        MediaStreamTrack.getSources(function(sources) {
+            for (var i = 0; i < sources.length; i++) {
+                console.log(sources[i].kind, sources[i].label);
+                var el = document.createElement('option');
+                el.setAttribute('value', sources[i].id);
+                el.appendChild(document.createTextNode(sources[i].label));
+                var dropdown;
+                if (sources[i].kind == 'audio') {
+                    dropdown = document.getElementById('micdevice');
+                    dropdown.appendChild(el);
+                    dropdown.removeAttribute('disabled');
+                    if (selected_mic == sources[i].id) {
+                        dropdown.selectedIndex = dropdown.children.length - 1;
+                    }
+                } else if (sources[i].kind == 'video') {
+                    // FIXME: show video
+                    dropdown = document.getElementById('camdevice');
+                    dropdown.appendChild(el);
+                    dropdown.removeAttribute('disabled');
+                    if (selected_cam == sources[i].id) {
+                        dropdown.selectedIndex = dropdown.children.length - 1;
+                    }
+                }
+            }
+        });
+    }
+}
+function changeMic() {
+    var opts = document.getElementById('micdevice');
+    console.log(opts.selectedOptions[0].value, opts.selectedOptions[0].text);
+    localStorage.setItem('settings:microphone', opts.selectedOptions[0].value);
+    getDevices();
+}
+
+function changeCam() {
+    var opts = document.getElementById('camdevice');
+    console.log(opts.selectedOptions[0].value, opts.selectedOptions[0].text);
+    localStorage.setItem('settings:camera', opts.selectedOptions[0].value);
+    getDevices();
+}
+
+function doJoin(nickname) {
     var roomnode = null;
     var path = window.location.pathname;
     var roomjid;
@@ -83,38 +152,80 @@ function doJoin() {
     }
     roomjid = roomnode + '@' + config.hosts.muc;
 
-    if (config.useNicks) {
-        var nick = window.prompt('Your nickname (optional)');
-        if (nick) {
-            roomjid += '/' + nick;
-        } else {
-            roomjid += '/' + Strophe.getNodeFromJid(connection.jid);
-        }
+    if (nickname) {
+        localStorage.setItem('settings:displayname', nickname);
+        connection.emuc.presMap['displayName'] = nickname;
     } else {
-        roomjid += '/' + Strophe.getNodeFromJid(connection.jid).substr(0,8);
+        nickname = Strophe.getNodeFromJid(connection.jid).substr(0,8);
     }
+    roomjid += '/' + nickname;
     connection.emuc.doJoin(roomjid);
 }
 
 $(document).bind('mediaready.jingle', function (event, stream) {
+    if (null != connection.jingle.localStream) {
+        connection.jingle.localStream.stop();
+    }
     connection.jingle.localStream = stream;
-    RTC.attachMediaStream($('#localVideo'), stream);
-    document.getElementById('localVideo').muted = true;
-    document.getElementById('localVideo').autoplay = true;
-    document.getElementById('localVideo').volume = 0;
 
-    localVideoSrc = document.getElementById('localVideo').src;
-    updateLargeVideo(localVideoSrc, true, 0);
+    if (stream.getAudioTracks().length) {
+        // we have a mic
+        // FIXME: this is not correct, breaks after four audio contexts :-(
+        var options = { interval:500 };
+        speechEvents = hark(stream, options);
 
-    $('#localVideo').click(function () {
-        updateLargeVideo($(this).attr('src'), true, 1);
+        /*
+        speechEvents.on('speaking', function() {
+            console.log('speaking');
+        });
+
+        speechEvents.on('stopped_speaking', function() {
+            console.log('stopped_speaking');
+        });
+        */
+        speechEvents.on('volume_change', function(volume, treshold) {
+            //console.log('volume', volume, treshold);
+            $('#loudness').css('background-color', '#2c8ad2');
+            $('#loudness').show();
+            if (volume < -70.0) {
+                $('#loudness').css('width', 5);
+            } else if (volume > -40) {
+                $('#loudness').css('width', '100%');
+            } else {
+                $('#loudness').css('width', ((volume+100)*100/30 - 100) + '%'); // map -70..-40 to percentage
+            }
+        });
+    } else {
+        // disable mic stuff?
+    }
+
+    document.getElementById('haircheckVideo').volume = 0;
+    if (stream.getVideoTracks().length) {
+        // we have a camera
+        RTC.attachMediaStream($('#haircheckVideo'), stream);
+    } else {
+        // disable cam stuff
+    }
+
+    // FIXME: hide it or check it?
+    $('#pleaseallow').hide(); 
+
+    // FIXME: check if there is a video stream, hide cam if not
+    // i.e. check stream.getVideoTracks().length
+    $('#camholder img').show();
+    $('#nickform').removeAttr('disabled');
+    $('#nickinput').focus();
+    $('#nickform').submit(function (event) { 
+        $('#nickform').attr('disabled', 'disabled');
+        event.preventDefault();
+        nickname = $('#nickinput').val();
+        doJoin(nickname);
     });
-
-    doJoin();
 });
 
 $(document).bind('mediafailure.jingle', function () {
     // FIXME
+    $('pleaseallow').show();
 });
   
 $(document).bind('remotestreamadded.jingle', function (event, data, sid) {
@@ -260,16 +371,34 @@ $(document).bind('setLocalDescription.jingle', function (event, sid) {
 
 $(document).bind('joined.muc', function (event, jid, info) {
     updateRoomUrl(window.location.href);
+    //var disp = $(pres).find('>nick[xmlns="http://jabber.org/protocol/nick"]').text();
     document.getElementById('localNick').appendChild(
-        document.createTextNode(Strophe.getResourceFromJid(jid) + ' (you)')
+        document.createTextNode('(you)')
     );
 
     if (Object.keys(connection.emuc.members).length < 1) {
         focus = new ColibriFocus(connection, config.hosts.bridge);
+        showFocusIndicator();
     }
                  
     // Once we've joined the muc show the toolbar
     showToolbar();
+
+    $('#haircheck').hide();
+    $('#largeVideoContainer').show();
+    $('#remoteVideos').show();
+    resizeLarge();
+    RTC.attachMediaStream($('#localVideo'), connection.jingle.localStream);
+    document.getElementById('localVideo').muted = true;
+    document.getElementById('localVideo').autoplay = true;
+    document.getElementById('localVideo').volume = 0;
+
+    localVideoSrc = document.getElementById('localVideo').src;
+    updateLargeVideo(localVideoSrc, true, 0);
+
+    $('#localVideo').click(function () {
+        updateLargeVideo($(this).attr('src'), true, 0);
+    });
 });
 
 $(document).bind('entered.muc', function (event, jid, info, pres) {
@@ -279,7 +408,8 @@ $(document).bind('entered.muc', function (event, jid, info, pres) {
     var container = addRemoteVideoContainer('participant_' + Strophe.getResourceFromJid(jid));
 
     var nickfield = document.createElement('span');
-    nickfield.appendChild(document.createTextNode(Strophe.getResourceFromJid(jid)));
+    var disp = $(pres).find('>nick[xmlns="http://jabber.org/protocol/nick"]').text();
+    nickfield.appendChild(document.createTextNode(disp)); //Strophe.getResourceFromJid(jid)));
     container.appendChild(nickfield);
     resizeThumbnails();
 
@@ -337,6 +467,10 @@ $(document).bind('presence.muc', function (event, jid, info, pres) {
         //console.log(jid, 'assoc ssrc', ssrc.getAttribute('type'), ssrc.getAttribute('ssrc'));
         ssrc2jid[ssrc.getAttribute('ssrc')] = jid;
     });
+    // FIXME: update display names!
+    var disp = $(pres).find('>nick[xmlns="http://jabber.org/protocol/nick"]').text();
+    var container = addRemoteVideoContainer('participant_' + Strophe.getResourceFromJid(jid));
+    $('participant_' + Strophe.getResourceFromJid(jid) + '>span').text(disp);
 });
 
 $(document).bind('passwordrequired.muc', function (event, jid) {
@@ -364,6 +498,11 @@ $(document).bind('passwordrequired.muc', function (event, jid) {
                     }
                 }
             });
+});
+
+$(document).bind('conflict.muc', function (event, jid) {
+    console.log('nickname conflict');
+    // TODO: suggest another nickname in the form
 });
 
 /*
@@ -597,7 +736,7 @@ function resizeThumbnails() {
 }
 
 $(document).ready(function () {
-    $('#nickinput').keydown(function(event) {
+    $('#displaynameinput').keydown(function(event) {
         if (event.keyCode == 13) {
             event.preventDefault();
             var val = this.value;
@@ -619,7 +758,11 @@ $(document).ready(function () {
             var message = this.value;
             $('#usermsg').val('').trigger('autosize.resize');
             this.focus();
-            connection.emuc.sendMessage(message, nickname);
+            if (localStorage.getItem('settings:displayname')) {
+                connection.emuc.sendMessage(message, localStorage.getItem('settings:displayname'));
+            } else {
+                connection.emuc.sendMessage(message);
+            }
         }
     });
 
@@ -977,8 +1120,8 @@ function openChat() {
     }
     
     // Request the focus in the nickname field or the chat input field.
-    if ($('#nickinput').is(':visible'))
-        $('#nickinput').focus();
+    if ($('#displaynameinput').is(':visible'))
+        $('#displaynameinput').focus();
     else
         $('#usermsg').focus();
 }

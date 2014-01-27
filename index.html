@@ -15,6 +15,7 @@
     <script src="libs/jquery.autosize.js"></script>
     <script src="config.js"></script><!-- adapt to your needs, i.e. set hosts and bosh path -->
     <script src="libs/prezi_player.js"></script>
+    <script src="libs/hark.bundle.js"></script>
   </head>
   <body>
     <div id="header">
@@ -47,9 +48,52 @@
         <input id="connect" type="submit" value="Connect" />
       </form>
     </div>
-
     <div id="videospace">
         <div class="fade_line"></div>
+      <div id='haircheck'>
+        <!-- check for non-webrtc browser here? -->
+        <div id='pleaseallow'>
+          Please allow access to camera and microphone.
+        </div>
+        <div id='haircheck_camera'>
+          <h3>Camera</h3>
+    	  <div id='camholder'>
+  	        <video id='haircheckVideo' autoplay='autoplay'></video>
+	        <img src='images/marker.png'/>
+	      </div>
+          <p>Adjust the camera to position your face within the markers.</p>
+          <form>
+            <select id='camdevice' disabled onchange="changeCam();">
+            </select>
+          </form>
+        </div>
+        <div id='haircheck_mic'>
+          <h3>Microphone</h3>
+          <form>
+            <select id='micdevice' disabled onchange="changeMic();">
+            </select>
+          </form>
+          <p>Talk to test your microphone.</p>
+          <div id='loudness_container'>
+            <div id='loudness'></div>
+          </div>
+        </div>
+        <div id='haircheck_speaker'>
+          <h3>Speakers</h3>
+          <form>
+            <select id='speakerdevice' disabled>
+              <option value='1'>not yet implemented</option>
+            </select>
+          </form>
+        </div>
+        <div>
+          <h3>Enter your nickname</h3>
+          <form id="nickform" disabled>
+            <input id="nickinput" type="text" placeholder="Enter a nickname or be a random stranger" autofocus>
+            <button type="submit">Go</button>
+          </form>
+        </div>
+      </div>
         <div id="largeVideoContainer" class="videocontainer">
             <div id="reloadPresentation"><a onclick='reloadPresentation();'><i title="Reload Prezi" class="fa fa-repeat fa-lg"></i></a></div>
             <div id="presentation"></div>
@@ -65,10 +109,10 @@
         </div>
     </div>
     <div id="chatspace">
-        <div id="nickname">
+        <div id="displayname">
             Enter a nickname in the box below
             <form>
-                <input type='text' id="nickinput" placeholder='Choose a nickname' autofocus>
+                <input type='text' id="displaynameinput" placeholder='Choose a nickname' autofocus>
             </form>
         </div>
         

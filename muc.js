@@ -31,9 +31,18 @@ Strophe.addConnectionPlugin('emuc', {
             this.connection.addHandler(this.onMessage.bind(this), null, 'message', null, null, this.roomjid, {matchBare: true});
         }
 
-        var join = $pres({to: this.myroomjid }).c('x', {xmlns: 'http://jabber.org/protocol/muc'});
+        // FIXME: this should use sendPresence
+        var join = $pres({to: this.myroomjid });
+        join.c('x', {xmlns: 'http://jabber.org/protocol/muc'});
         if (password !== undefined) {
             join.c('password').t(password);
+            join.up();
+        }
+        join.up();
+        if (this.presMap['displayName']) {
+            join.c('nick', {xmlns: 'http://jabber.org/protocol/nick'});
+            join.t(this.presMap['displayName']).up();
+            join.up();
         }
         this.connection.send(join);
     },
@@ -108,6 +117,8 @@ Strophe.addConnectionPlugin('emuc', {
         var from = pres.getAttribute('from');
         if ($(pres).find('>error[type="auth"]>not-authorized[xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"]').length) {
             $(document).trigger('passwordrequired.muc', [from]);
+        } else if ($(pres).find('>error[type="cancel"]>conflict[xmlns="urn:ietf:params:xml:ns:xmpp-stanzas"]').length) {
+            $(document).trigger('conflict.muc', [from]);
         } else {
             console.warn('onPresError ', pres);
         }
@@ -116,6 +127,7 @@ Strophe.addConnectionPlugin('emuc', {
     sendMessage: function (body, nickname) {
         var msg = $msg({to: this.roomjid, type: 'groupchat'});
         msg.c('body', body).up();
+        // FIXME: sending those should not be done with every message
         if (nickname) {
             msg.c('nick', {xmlns: 'http://jabber.org/protocol/nick'}).t(nickname).up().up();
         }
@@ -164,9 +176,15 @@ Strophe.addConnectionPlugin('emuc', {
     sendPresence: function () {
         var pres = $pres({to: this.presMap['to'] });
         pres.c('x', {xmlns: this.presMap['xns']}).up();
+        if (this.presMap['displayName']) {
+            pres.c('nick', {xmlns: 'http://jabber.org/protocol/nick'});
+            pres.t(this.presMap['displayName'])
+            pres.up();
+        }
         if (this.presMap['prezins']) {
-            pres.c('prezi', {xmlns: this.presMap['prezins'], 'url': this.presMap['preziurl']}).
-                            c('current').t(this.presMap['prezicurrent']).up().up();
+            pres.c('prezi', {xmlns: this.presMap['prezins'], 'url': this.presMap['preziurl']});
+            pres.c('current');
+            pres.t(this.presMap['prezicurrent']).up().up();
         }
 
         if (this.presMap['medians'])
