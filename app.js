@@ -93,9 +93,11 @@ function initHaircheck() {
                 if (sources[i].kind == 'audio') {
                     dropdown = document.getElementById('micdevice');
                     dropdown.appendChild(el);
-                    dropdown.removeAttribute('disabled');
                     if (selected_mic == sources[i].id) {
                         dropdown.selectedIndex = dropdown.children.length - 1;
+                    }
+                    if (dropdown.children.length > 1) {
+                        dropdown.removeAttribute('disabled');
                     }
                 } else if (sources[i].kind == 'video') {
                     // FIXME: show video
@@ -104,6 +106,9 @@ function initHaircheck() {
                     dropdown.removeAttribute('disabled');
                     if (selected_cam == sources[i].id) {
                         dropdown.selectedIndex = dropdown.children.length - 1;
+                    }
+                    if (dropdown.children.length > 1) {
+                        dropdown.removeAttribute('disabled');
                     }
                 }
             }
@@ -171,7 +176,7 @@ $(document).bind('mediaready.jingle', function (event, stream) {
     if (stream.getAudioTracks().length) {
         // we have a mic
         // FIXME: this is not correct, breaks after four audio contexts :-(
-        var options = { interval:500 };
+        var options = { interval:1000 };
         speechEvents = hark(stream, options);
 
         /*
