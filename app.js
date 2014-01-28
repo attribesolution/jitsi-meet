@@ -207,8 +207,7 @@ $(document).bind('mediaready.jingle', function (event, stream) {
         // disable cam stuff
     }
 
-    // FIXME: hide it or check it?
-    $('#pleaseallow').hide(); 
+    $('#haircheck_access').get(0).className = 'fa fa-check';
 
     // FIXME: check if there is a video stream, hide cam if not
     // i.e. check stream.getVideoTracks().length
@@ -225,6 +224,7 @@ $(document).bind('mediaready.jingle', function (event, stream) {
 
 $(document).bind('mediafailure.jingle', function () {
     // FIXME
+    $('#haircheck_access').get(0).className = 'fa fa-warning';
     $('pleaseallow').show();
 });
   
