@@ -5,7 +5,7 @@ function TraceablePeerConnection(ice_config, constraints) {
     this.updateLog = [];
     this.stats = {};
     this.statsinterval = null;
-    this.maxstats = 300; // limit to 300 values, i.e. 5 minutes; set to 0 to disable
+    this.maxstats = 0; // limit to 300 values, i.e. 5 minutes; set to 0 to disable
 
     /**
      * Array of ssrcs that will be added on next modifySources call.
@@ -89,7 +89,7 @@ function TraceablePeerConnection(ice_config, constraints) {
             self.ondatachannel(event);
         }
     }
-    if (!navigator.mozGetUserMedia) {
+    if (!navigator.mozGetUserMedia && this.maxstats > 0) {
         this.statsinterval = window.setInterval(function() {
             self.peerconnection.getStats(function(stats) {
                 var results = stats.result();
@@ -446,7 +446,7 @@ TraceablePeerConnection.prototype.getStats = function(callback, errback) {
     if (navigator.mozGetUserMedia) {
         // ignore for now...
     } else {
-        this.peerconnection.getStats(callback);
+        this.peerconnection.getStats(callback, errback);
     }
 };
 
