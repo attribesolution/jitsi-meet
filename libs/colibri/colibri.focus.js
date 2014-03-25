@@ -75,10 +75,7 @@ ColibriFocus.prototype.makeConference = function (peers) {
         self.channels.push([]);
     });
 
-    this.peerconnection
-        = new TraceablePeerConnection(
-            this.connection.jingle.ice_config,
-            this.connection.jingle.pc_constraints );
+    this.initPeerConnection();
 
     if(this.connection.jingle.localAudio) {
         this.peerconnection.addStream(this.connection.jingle.localAudio);
@@ -86,24 +83,6 @@ ColibriFocus.prototype.makeConference = function (peers) {
     if(this.connection.jingle.localVideo) {
         this.peerconnection.addStream(this.connection.jingle.localVideo);
     }
-    this.peerconnection.oniceconnectionstatechange = function (event) {
-        console.warn('ice connection state changed to', self.peerconnection.iceConnectionState);
-        /*
-        if (self.peerconnection.signalingState == 'stable' && self.peerconnection.iceConnectionState == 'connected') {
-            console.log('adding new remote SSRCs from iceconnectionstatechange');
-            window.setTimeout(function() { self.modifySources(); }, 1000);
-        }
-        */
-    };
-    this.peerconnection.onsignalingstatechange = function (event) {
-        console.warn(self.peerconnection.signalingState);
-        /*
-        if (self.peerconnection.signalingState == 'stable' && self.peerconnection.iceConnectionState == 'connected') {
-            console.log('adding new remote SSRCs from signalingstatechange');
-            window.setTimeout(function() { self.modifySources(); }, 1000);
-        }
-        */
-    };
     this.peerconnection.onaddstream = function (event) {
         // search the jid associated with this stream
         Object.keys(self.remotessrc).forEach(function (jid) {

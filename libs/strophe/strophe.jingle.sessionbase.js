@@ -8,8 +8,64 @@ function SessionBase(connection, sid){
 
     this.connection = connection;
     this.sid = sid;
+    // FIXME !!!
+    this.startTime = null;
+    this.stopTime = null;
 }
 
+SessionBase.prototype.initPeerConnection = function() {
+
+    this.peerconnection
+        = new TraceablePeerConnection(
+                this.connection.jingle.ice_config,
+                this.connection.jingle.pc_constraints );
+
+    var self = this;
+    // Hook signaling state updates
+    this.peerconnection.onsignalingstatechange = function (event) {
+        if (!(self && self.peerconnection)) return;
+        $(document).trigger('signalingstatechange.jingle', [self.sid, self]);
+    };
+    // Hook ice state updates
+    this.peerconnection.oniceconnectionstatechange = function (event) {
+        if (!(self && self.peerconnection)) return;
+        switch (self.peerconnection.iceConnectionState) {
+            case 'connected':
+                self.startTime = new Date();
+                break;
+            case 'disconnected':
+                self.stopTime = new Date();
+                break;
+        }
+        $(document).trigger('iceconnectionstatechange.jingle', [self.sid, self]);
+    };
+}
+
+/**
+ * Triggers 'error.jingle' document callback.
+ * @param stanza error response stanza
+ * @param source source of an error that describes the request:
+ *        - 'answer' error when sending 'session-accept'
+ *        - 'offer' error when sending 'session-initiate'
+ *        - 'transportinfo' error when sending ice candidates
+ *        - 'terminate' error when terminating the session
+ */
+SessionBase.prototype.reportIQError = function(stanza, source){
+    var error = ($(stanza).find('error').length) ? {
+        code: $(stanza).find('error').attr('code'),
+        reason: $(stanza).find('error :first')[0].tagName
+    }:{};
+    error.source = source;
+    $(document).trigger('error.jingle', [this.sid, error]);
+}
+
+/**
+ * The same as <tt>reportIQError</tt>, but used to notify about successful transactions.
+ * @param source see reportIQError sources for description.
+ */
+SessionBase.prototype.reportIQAck = function(source){
+    $(document).trigger('ack.jingle', [this.sid, { source: source}]);
+}
 
 SessionBase.prototype.modifySources = function (successCallback) {
     var self = this;

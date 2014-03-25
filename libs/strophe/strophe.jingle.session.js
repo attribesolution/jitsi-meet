@@ -16,8 +16,6 @@ function JingleSession(me, sid, connection) {
     this.localStreams = [];
     this.relayedStreams = [];
     this.remoteStreams = [];
-    this.startTime = null;
-    this.stopTime = null;
     this.media_constraints = null;
     this.pc_constraints = null;
     this.ice_config = {};
@@ -54,10 +52,7 @@ JingleSession.prototype.initiate = function (peerjid, isInitiator) {
     this.hadturncandidate = false;
     this.lasticecandidate = false;
 
-    this.peerconnection
-        = new TraceablePeerConnection(
-            this.connection.jingle.ice_config,
-            this.connection.jingle.pc_constraints );
+    this.initPeerConnection();
 
     this.peerconnection.onicecandidate = function (event) {
         self.sendIceCandidate(event.candidate);
@@ -74,21 +69,6 @@ JingleSession.prototype.initiate = function (peerjid, isInitiator) {
         }
         // FIXME: remotestreamremoved.jingle not defined anywhere(unused)
         $(document).trigger('remotestreamremoved.jingle', [event, self.sid]);
-    };
-    this.peerconnection.onsignalingstatechange = function (event) {
-        if (!(self && self.peerconnection)) return;
-    };
-    this.peerconnection.oniceconnectionstatechange = function (event) {
-        if (!(self && self.peerconnection)) return;
-        switch (self.peerconnection.iceConnectionState) {
-            case 'connected':
-                this.startTime = new Date();
-                break;
-            case 'disconnected':
-                this.stopTime = new Date();
-                break;
-        }
-        $(document).trigger('iceconnectionstatechange.jingle', [self.sid, self]);
     };
     // add any local and relayed stream
     this.localStreams.forEach(function(stream) {
@@ -129,19 +109,8 @@ JingleSession.prototype.accept = function () {
             sid: this.sid });
     prsdp.toJingle(accept, this.initiator == this.me ? 'initiator' : 'responder');
     this.connection.sendIQ(accept,
-        function () {
-            var ack = {};
-            ack.source = 'answer';
-            $(document).trigger('ack.jingle', [self.sid, ack]);
-        },
-        function (stanza) {
-            var error = ($(stanza).find('error').length) ? {
-                code: $(stanza).find('error').attr('code'),
-                reason: $(stanza).find('error :first')[0].tagName,
-            }:{};
-            error.source = 'answer';
-            $(document).trigger('error.jingle', [self.sid, error]);
-        },
+        function () { self.reportIQAck('answer'); },
+        function (stanza) { self.reportIQError(stanza, 'answer'); },
         10000);
 
     var sdp = this.peerconnection.localDescription.sdp;
@@ -237,21 +206,11 @@ JingleSession.prototype.sendIceCandidate = function (candidate) {
             this.localSDP = new SDP(this.peerconnection.localDescription.sdp);
             this.localSDP.toJingle(init, this.initiator == this.me ? 'initiator' : 'responder');
             this.connection.sendIQ(init,
-                function () {
-                    //console.log('session initiate ack');
-                    var ack = {};
-                    ack.source = 'offer';
-                    $(document).trigger('ack.jingle', [self.sid, ack]);
-                },
+                function () { self.reportIQAck('offer'); },
                 function (stanza) {
                     self.state = 'error';
                     self.peerconnection.close();
-                    var error = ($(stanza).find('error').length) ? {
-                        code: $(stanza).find('error').attr('code'),
-                        reason: $(stanza).find('error :first')[0].tagName,
-                    }:{};
-                    error.source = 'offer';
-                    $(document).trigger('error.jingle', [self.sid, error]);
+                    self.reportIQError(stanza, 'offer');
                 },
                 10000);
         }
@@ -298,20 +257,10 @@ JingleSession.prototype.sendIceCandidates = function (candidates) {
     }
     // might merge last-candidate notification into this, but it is called alot later. See webrtc issue #2340
     //console.log('was this the last candidate', this.lasticecandidate);
+    var self = this;
     this.connection.sendIQ(cand,
-        function () {
-            var ack = {};
-            ack.source = 'transportinfo';
-            $(document).trigger('ack.jingle', [this.sid, ack]);
-        },
-        function (stanza) {
-            var error = ($(stanza).find('error').length) ? {
-                code: $(stanza).find('error').attr('code'),
-                reason: $(stanza).find('error :first')[0].tagName,
-            }:{};
-            error.source = 'transportinfo';
-            $(document).trigger('error.jingle', [this.sid, error]);
-        },
+        function () { self.reportIQAck('transportinfo'); },
+        function (stanza) { self.reportIQError(stanza, 'transportinfo'); },
         10000);
 };
 
@@ -343,20 +292,11 @@ JingleSession.prototype.createdOffer = function (sdp) {
                 sid: this.sid});
         this.localSDP.toJingle(init, this.initiator == this.me ? 'initiator' : 'responder');
         this.connection.sendIQ(init,
-            function () {
-                var ack = {};
-                ack.source = 'offer';
-                $(document).trigger('ack.jingle', [self.sid, ack]);
-            },
+            function () { self.reportIQAck('offer'); },
             function (stanza) {
                 self.state = 'error';
                 self.peerconnection.close();
-                var error = ($(stanza).find('error').length) ? {
-                    code: $(stanza).find('error').attr('code'),
-                    reason: $(stanza).find('error :first')[0].tagName,
-                }:{};
-                error.source = 'offer';
-                $(document).trigger('error.jingle', [self.sid, error]);
+                self.reportIQError(stanza, 'offer');
             },
             10000);
     }
@@ -563,18 +503,9 @@ JingleSession.prototype.createdAnswer = function (sdp, provisional) {
                     sid: this.sid });
             this.localSDP.toJingle(accept, this.initiator == this.me ? 'initiator' : 'responder');
             this.connection.sendIQ(accept,
-                function () {
-                    var ack = {};
-                    ack.source = 'answer';
-                    $(document).trigger('ack.jingle', [self.sid, ack]);
-                },
+                function () { self.reportIQAck('answer'); },
                 function (stanza) {
-                    var error = ($(stanza).find('error').length) ? {
-                        code: $(stanza).find('error').attr('code'),
-                        reason: $(stanza).find('error :first')[0].tagName,
-                    }:{};
-                    error.source = 'answer';
-                    $(document).trigger('error.jingle', [self.sid, error]);
+                    self.reportIQError(stanza, 'answer');
                 },
                 10000);
         } else {
@@ -626,17 +557,9 @@ JingleSession.prototype.sendTerminate = function (reason, text) {
             self.peerconnection.close();
             self.peerconnection = null;
             self.terminate();
-            var ack = {};
-            ack.source = 'terminate';
-            $(document).trigger('ack.jingle', [self.sid, ack]);
+            self.reportIQAck('terminate');
         },
-        function (stanza) {
-            var error = ($(stanza).find('error').length) ? {
-                code: $(stanza).find('error').attr('code'),
-                reason: $(stanza).find('error :first')[0].tagName,
-            }:{};
-            $(document).trigger('ack.jingle', [self.sid, error]);
-        },
+        function (stanza) { self.reportIQError(stanza, 'terminate'); },
         10000);
     if (this.statsinterval !== null) {
         window.clearInterval(this.statsinterval);
