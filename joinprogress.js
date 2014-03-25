@@ -151,9 +151,20 @@ $(document).bind('ack.jingle', function(event, sid, ack) {
     //console.info("Jingle ack "+sid, ack);
 });
 
+/**
+ *
+ * @type {StatsCollector}
+ */
+var statsCollector = null;
+
 $(document).bind('endgathercandidates.jingle', function (event, session) {
     // Finished gathering candidates
     progressListener.s6_gatheredIceCandidates();
+
+    if(statsCollector) {
+        statsCollector.stop();
+    }
+    statsCollector = new StatsCollector(session.peerconnection);
 });
 
 $(document).bind('iceconnectionstatechange.jingle', function(event, sid, session){
