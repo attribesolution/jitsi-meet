@@ -196,6 +196,16 @@ Strophe.addConnectionPlugin('emuc', {
                             c('current').t(this.presMap['prezicurrent']).up().up();
         }
 
+        var progressNs = this.presMap['progress_ns'];
+        if (progressNs) {
+            pres.c('progress', {xmlns: progressNs, 'progress': this.presMap['progress_percent']})
+            // Insert error message
+            if(this.presMap['progress_error']) {
+                pres.c('error').t(this.presMap['progress_error']).up();
+            }
+            pres.up();
+        }
+
         if (this.presMap['etherpadns']) {
             pres.c('etherpad', {xmlns: this.presMap['etherpadns']}).t(this.presMap['etherpadname']).up();
         }
@@ -259,5 +269,14 @@ Strophe.addConnectionPlugin('emuc', {
     addEtherpadToPresence: function(etherpadName) {
         this.presMap['etherpadns'] = 'http://jitsi.org/jitmeet/etherpad';
         this.presMap['etherpadname'] = etherpadName;
+    },
+    addJoinProgressToPresence: function(progress, error) {
+        this.presMap['progress_ns'] = 'http://jitsi.org/jitmeet/join_progress';
+        this.presMap['progress_percent'] = progress;
+        if(error) {
+            this.presMap['progress_error'] = error;
+        } else {
+            delete this.presMap['progress_error'];
+        }
     }
 });

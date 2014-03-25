@@ -96,6 +96,7 @@ ColibriFocus.prototype.makeConference = function (peers) {
         //console.log('focus onicecandidate', self.confid, new Date().getTime(), event.candidate);
         if (!event.candidate) {
             console.log('end of candidates');
+            $(document).trigger('endgathercandidates.jingle', [self]);
             return;
         }
         self.sendIceCandidate(event.candidate);
@@ -182,6 +183,10 @@ ColibriFocus.prototype._makeConference = function () {
 // callback when a conference was created
 ColibriFocus.prototype.createdConference = function (result) {
     console.log('created a conference on the bridge');
+
+    // Notify we've created the conference
+    $(document).trigger('conferencecreated.jingle', [this.sid]);
+
     var self = this;
     var tmp;
 
@@ -323,6 +328,9 @@ ColibriFocus.prototype.createdConference = function (result) {
                             for (var i = 0; i < numparticipants; i++) {
                                 self.initiate(self.peers[i], true);
                             }
+
+                            // Notify we've sent session initiate to peers
+                            $(document).trigger('peersInvited.jingle', [self.sid]);
                         },
                         function (error) {
                             console.warn('setLocalDescription failed.', error);

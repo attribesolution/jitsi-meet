@@ -221,6 +221,9 @@ JingleSession.prototype.sendIceCandidate = function (candidate) {
         if (!(this.hadstuncandidate || this.hadturncandidate) && this.peerconnection.signalingState != 'closed') {
             $(document).trigger('nostuncandidates.jingle', [this.sid]);
         }
+
+        // Notify about the progress
+        $(document).trigger('endgathercandidates.jingle', [this]);
     }
 };
 

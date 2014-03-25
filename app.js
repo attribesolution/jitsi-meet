@@ -14,6 +14,8 @@ var preziPlayer = null;
 
 /* window.onbeforeunload = closePageWarning; */
 
+var progressListener = null;
+
 function init() {
     RTC = setupRTC();
     if (RTC === null) {
@@ -23,6 +25,8 @@ function init() {
         window.location.href = 'chromeonly.html';
         return;
     }
+
+    progressListener = new JoinProgressListener();
 
     connection = new Strophe.Connection(document.getElementById('boshURL').value || config.bosh || '/http-bind');
 
@@ -55,7 +59,15 @@ function init() {
                     });
             });
 
+            // Notify connected to XMPP
+            progressListener.s1_connectedToXmpp();
+
             document.getElementById('connect').disabled = true;
+        } else if( status === Strophe.Status.ERROR
+                   || status === Strophe.Status.CONNFAIL
+                   || status === Strophe.Status.AUTHFAIL
+                   || status === Strophe.Status.DISCONNECTED ){
+            progressListener.s1_failedToConnectToXmpp(status);
         } else {
             console.log('status', status);
         }
@@ -82,6 +94,8 @@ function obtainAudioAndVideoPermissions(callback){
         },
         function(error){
             console.error('failed to obtain audio/video stream - stop', error);
+            // Failed to get audio
+            progressListener.s2_getAudioFailed(error);
         });
 }
 
@@ -105,12 +119,17 @@ function videoStreamReady(stream) {
 
 function videoStreamFailed(error) {
 
-    console.warn("Failed to obtain video stream - continue anyway", error);
+    // Failed to get video
+    progressListener.s2_getVideoFailed(error);
 
     doJoin();
 }
 
 function doJoin() {
+
+    // Notify have media access and joining the room
+    progressListener.s2_allowedCamera();
+
     var roomnode = null;
     var path = window.location.pathname;
     var roomjid;
@@ -198,16 +217,26 @@ $(document).bind('remotestreamadded.jingle', function (event, data, sid) {
     function waitForRemoteVideo(selector, sid) {
         if(selector.removed) {
             console.warn("media removed before had started", selector);
+            // Remove from pending videos
+            progressListener.ensurePendingVideoRemoved(selector);
             return;
         }
         var sess = connection.jingle.sessions[sid];
         if (data.stream.id === 'mixedmslabel') return;
-        videoTracks = data.stream.getVideoTracks();
-        console.log("waiting..", videoTracks, selector[0]);
+        var videoTracks = data.stream.getVideoTracks();
+        console.log("waiting for video ", videoTracks, selector[0], selector[0].currentTime);
+
+        // Ensure that video exists in the list
+        progressListener.ensurePendingVideoAdded(selector);
+
         if (videoTracks.length === 0 || selector[0].currentTime > 0) {
             RTC.attachMediaStream(selector, data.stream); // FIXME: why do i have to do this for FF?
             $(document).trigger('callactive.jingle', [selector, sid]);
             console.log('waitForremotevideo', sess.peerconnection.iceConnectionState, sess.peerconnection.signalingState);
+
+            // Remove pending video
+            progressListener.ensurePendingVideoRemoved(selector);
+
         } else {
             setTimeout(function () { waitForRemoteVideo(selector, sid); }, 250);
         }
@@ -447,8 +476,12 @@ function muteVideo(pc, unmute) {
     );
 }
 
+// Callback executed only when we're not the focus
 $(document).bind('callincoming.jingle', function (event, sid) {
     var sess = connection.jingle.sessions[sid];
+
+    // Notify that we're joining the conference
+    progressListener.s4_joinedConference();
 
     // TODO: do we check activecall == null?
     activecall = sess;
@@ -459,6 +492,8 @@ $(document).bind('callincoming.jingle', function (event, sid) {
     sess.sendAnswer();
     sess.accept();
 
+    // Session accept sent
+    progressListener.s5_sessionAccepted();
 });
 
 $(document).bind('callactive.jingle', function (event, videoelem, sid) {
@@ -519,6 +554,10 @@ $(document).bind('setLocalDescription.jingle', function (event, sid) {
 });
 
 $(document).bind('joined.muc', function (event, jid, info) {
+
+    // Notify that we've joined the room
+    progressListener.s3_joinedRoom();
+
     updateRoomUrl(window.location.href);
     document.getElementById('localNick').appendChild(
         document.createTextNode(Strophe.getResourceFromJid(jid) + ' (me)')
@@ -651,6 +690,25 @@ $(document).bind('presence.muc', function (event, jid, info, pres) {
             showDisplayName('localVideoContainer', info.displayName + ' (me)');
         else
             showDisplayName('participant_' + Strophe.getResourceFromJid(jid), info.displayName);
+    }
+
+    // Join progress
+    var progNode = $(pres).find('>progress[xmlns="http://jitsi.org/jitmeet/join_progress"]');
+    if(progNode.length > 0) {
+
+        var errorNode = $(pres).find('>progress[xmlns="http://jitsi.org/jitmeet/join_progress"]>error');
+        var error = '';
+        if(errorNode.length > 0) {
+            error = ' error: ' + errorNode.text();
+        }
+
+        var progress = progNode.attr('progress') + '%' + error;
+
+        if (jid === connection.emuc.myroomjid) {
+            console.info("Local progress: " + progress);
+        } else {
+            console.info("Peer " + Strophe.getResourceFromJid(jid) + " progress " + progress);
+        }
     }
 });
 
