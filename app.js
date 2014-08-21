@@ -198,164 +198,190 @@ function doJoin() {
 }
 
 $(document).bind('remotestreamadded.jingle', function (event, data, sid) {
-    function waitForRemoteVideo(selector, sid, ssrc) {
-        if (selector.removed) {
-            console.warn("media removed before had started", selector);
-            return;
-        }
-        var sess = connection.jingle.sessions[sid];
-        if (data.stream.id === 'mixedmslabel') return;
-        var videoTracks = data.stream.getVideoTracks();
+    var waitForPresenceTimes = 0;
+    // We signal our streams (through Jingle to the focus) before we set our
+    // presence (through which peers associate remote streams to jids). So, it
+    // might arrive that a remote stream is added but ssrc2jid is not yet
+    // updated and thus data.peerjid cannot be successfully set. We wait for
+    // up to a second for the presence to arrive.
+    function waitForPresence() {
+        function waitForRemoteVideo(selector, sid, ssrc) {
+            if (selector.removed) {
+                console.warn("media removed before had started", selector);
+                return;
+            }
+            var sess = connection.jingle.sessions[sid];
+            if (data.stream.id === 'mixedmslabel') return;
+            var videoTracks = data.stream.getVideoTracks();
 //        console.log("waiting..", videoTracks, selector[0]);
 
-        if (videoTracks.length === 0 || selector[0].currentTime > 0) {
-            RTC.attachMediaStream(selector, data.stream); // FIXME: why do i have to do this for FF?
+            if (videoTracks.length === 0 || selector[0].currentTime > 0) {
+                var simulcast = new Simulcast();
+                var videoStream = simulcast.getRemoteVideoStreamByQuality(data.stream, 1);
+                RTC.attachMediaStream(selector, videoStream); // FIXME: why do i have to do this for FF?
 
-            // FIXME: add a class that will associate peer Jid, video.src, it's ssrc and video type
-            //        in order to get rid of too many maps
-            if (ssrc) {
-                videoSrcToSsrc[sel.attr('src')] = ssrc;
+                // FIXME: add a class that will associate peer Jid, video.src, it's ssrc and video type
+                //        in order to get rid of too many maps
+                if (ssrc) {
+                    videoSrcToSsrc[sel.attr('src')] = ssrc;
+                } else {
+                    console.warn("No ssrc given for video", sel);
+                }
+
+                $(document).trigger('callactive.jingle', [selector, sid]);
+                console.log('waitForremotevideo', sess.peerconnection.iceConnectionState, sess.peerconnection.signalingState);
             } else {
-                console.warn("No ssrc given for video", sel);
+                setTimeout(function () {
+                    waitForRemoteVideo(selector, sid, ssrc);
+                }, 250);
             }
+        }
+        var sess = connection.jingle.sessions[sid];
 
-            $(document).trigger('callactive.jingle', [selector, sid]);
-            console.log('waitForremotevideo', sess.peerconnection.iceConnectionState, sess.peerconnection.signalingState);
+        var thessrc;
+        // look up an associated JID for a stream id
+        if (data.stream.id.indexOf('mixedmslabel') === -1) {
+            // look only at a=ssrc: and _not_ at a=ssrc-group: lines
+            var ssrclines = SDPUtil.find_lines(sess.peerconnection.remoteDescription.sdp, 'a=ssrc:');
+            ssrclines = ssrclines.filter(function (line) {
+                return line.indexOf('mslabel:' + data.stream.label) !== -1;
+            });
+            if (ssrclines.length) {
+                thessrc = ssrclines[0].substring(7).split(' ')[0];
+                // ok to overwrite the one from focus? might save work in colibri.js
+                console.log('associated jid', ssrc2jid[thessrc], data.peerjid);
+                if (ssrc2jid[thessrc]) {
+                    data.peerjid = ssrc2jid[thessrc];
+                }
+            }
+        }
+
+        var container;
+        var remotes = document.getElementById('remoteVideos');
+
+        if (data.peerjid) {
+            VideoLayout.ensurePeerContainerExists(data.peerjid);
+            container = document.getElementById(
+                    'participant_' + Strophe.getResourceFromJid(data.peerjid));
         } else {
-            setTimeout(function () { waitForRemoteVideo(selector, sid, ssrc); }, 250);
-        }
-    }
-    var sess = connection.jingle.sessions[sid];
-
-    var thessrc;
-    // look up an associated JID for a stream id
-    if (data.stream.id.indexOf('mixedmslabel') === -1) {
-        var ssrclines = SDPUtil.find_lines(sess.peerconnection.remoteDescription.sdp, 'a=ssrc');
-        ssrclines = ssrclines.filter(function (line) {
-            return line.indexOf('mslabel:' + data.stream.label) !== -1;
-        });
-        if (ssrclines.length) {
-            thessrc = ssrclines[0].substring(7).split(' ')[0];
-            // ok to overwrite the one from focus? might save work in colibri.js
-            console.log('associated jid', ssrc2jid[thessrc], data.peerjid);
-            if (ssrc2jid[thessrc]) {
-                data.peerjid = ssrc2jid[thessrc];
+            if (data.stream.id !== 'mixedmslabel') {
+                if (waitForPresenceTimes > 4) {
+                    console.error('can not associate stream',
+                        data.stream.id,
+                        'with a participant');
+                }
+                else {
+                    waitForPresenceTimes++;
+                    setTimeout(waitForPresence, 250);
+                 }
+                // We don't want to add it here since it will cause troubles
+                return;
             }
-        }
-    }
-
-    var container;
-    var remotes = document.getElementById('remoteVideos');
-
-    if (data.peerjid) {
-        VideoLayout.ensurePeerContainerExists(data.peerjid);
-        container  = document.getElementById(
-                'participant_' + Strophe.getResourceFromJid(data.peerjid));
-    } else {
-        if (data.stream.id !== 'mixedmslabel') {
-            console.error(  'can not associate stream',
-                            data.stream.id,
-                            'with a participant');
-            // We don't want to add it here since it will cause troubles
-            return;
-        }
-        // FIXME: for the mixed ms we dont need a video -- currently
-        container = document.createElement('span');
-        container.className = 'videocontainer';
-        remotes.appendChild(container);
-        Util.playSoundNotification('userJoined');
-    }
-
-    var isVideo = data.stream.getVideoTracks().length > 0;
-    var vid = isVideo ? document.createElement('video') : document.createElement('audio');
-    var id = (isVideo ? 'remoteVideo_' : 'remoteAudio_') + sid + '_' + data.stream.id;
-
-    vid.id = id;
-    vid.autoplay = true;
-    vid.oncontextmenu = function () { return false; };
-
-    container.appendChild(vid);
-
-    // TODO: make mixedstream display:none via css?
-    if (id.indexOf('mixedmslabel') !== -1) {
-        container.id = 'mixedstream';
-        $(container).hide();
-    }
-
-    var sel = $('#' + id);
-    sel.hide();
-    RTC.attachMediaStream(sel, data.stream);
-
-    if (isVideo) {
-        waitForRemoteVideo(sel, sid, thessrc);
-    }
-
-    data.stream.onended = function () {
-        console.log('stream ended', this.id);
-
-        // Mark video as removed to cancel waiting loop(if video is removed
-        // before has started)
-        sel.removed = true;
-        sel.remove();
-
-        var audioCount = $('#' + container.id + '>audio').length;
-        var videoCount = $('#' + container.id + '>video').length;
-        if (!audioCount && !videoCount) {
-            console.log("Remove whole user", container.id);
-            // Remove whole container
-            container.remove();
-            Util.playSoundNotification('userLeft');
-            VideoLayout.resizeThumbnails();
+            // FIXME: for the mixed ms we dont need a video -- currently
+            container = document.createElement('span');
+            container.className = 'videocontainer';
+            remotes.appendChild(container);
+            Util.playSoundNotification('userJoined');
         }
 
-        VideoLayout.checkChangeLargeVideo(vid.src);
-    };
+        var isVideo = data.stream.getVideoTracks().length > 0;
+        var vid = isVideo ? document.createElement('video') : document.createElement('audio');
+        var id = (isVideo ? 'remoteVideo_' : 'remoteAudio_') + sid + '_' + data.stream.id;
 
-    // Add click handler.
-    container.onclick = function (event) {
-        /*
-         * FIXME It turns out that videoThumb may not exist (if there is no
-         * actual video).
-         */
-        var videoThumb = $('#' + container.id + '>video').get(0);
+        vid.id = id;
+        vid.autoplay = true;
+        vid.oncontextmenu = function () {
+            return false;
+        };
 
-        if (videoThumb)
-            VideoLayout.handleVideoThumbClicked(videoThumb.src);
+        container.appendChild(vid);
 
-        event.preventDefault();
-        return false;
-    };
+        // TODO: make mixedstream display:none via css?
+        if (id.indexOf('mixedmslabel') !== -1) {
+            container.id = 'mixedstream';
+            $(container).hide();
+        }
 
-    // Add hover handler
-    $(container).hover(
-        function() {
-            VideoLayout.showDisplayName(container.id, true);
-        },
-        function() {
-            var videoSrc = null;
-            if ($('#' + container.id + '>video')
+        var sel = $('#' + id);
+        sel.hide();
+        var simulcast = new Simulcast();
+        var videoStream = simulcast.getRemoteVideoStreamByQuality(data.stream, 1);
+        RTC.attachMediaStream(sel, videoStream);
+        videoSrcToSsrc[sel.attr('src')] = thessrc;
+
+        if (isVideo) {
+            waitForRemoteVideo(sel, sid, thessrc);
+        }
+
+        data.stream.onended = function () {
+            console.log('stream ended', this.id);
+
+            // Mark video as removed to cancel waiting loop(if video is removed
+            // before has started)
+            sel.removed = true;
+            sel.remove();
+
+            var audioCount = $('#' + container.id + '>audio').length;
+            var videoCount = $('#' + container.id + '>video').length;
+            if (!audioCount && !videoCount) {
+                console.log("Remove whole user", container.id);
+                // Remove whole container
+                container.remove();
+                Util.playSoundNotification('userLeft');
+                VideoLayout.resizeThumbnails();
+            }
+
+            VideoLayout.checkChangeLargeVideo(vid.src);
+        };
+
+        // Add click handler.
+        container.onclick = function (event) {
+            /*
+             * FIXME It turns out that videoThumb may not exist (if there is no
+             * actual video).
+             */
+            var videoThumb = $('#' + container.id + '>video').get(0);
+
+            if (videoThumb)
+                VideoLayout.handleVideoThumbClicked(videoThumb.src);
+
+            event.preventDefault();
+            return false;
+        };
+
+        // Add hover handler
+        $(container).hover(
+            function () {
+                VideoLayout.showDisplayName(container.id, true);
+            },
+            function () {
+                var videoSrc = null;
+                if ($('#' + container.id + '>video')
                     && $('#' + container.id + '>video').length > 0) {
-                videoSrc = $('#' + container.id + '>video').get(0).src;
-            }
+                    videoSrc = $('#' + container.id + '>video').get(0).src;
+                }
 
-            // If the video has been "pinned" by the user we want to keep the
-            // display name on place.
-            if (!VideoLayout.isLargeVideoVisible()
+                // If the video has been "pinned" by the user we want to keep the
+                // display name on place.
+                if (!VideoLayout.isLargeVideoVisible()
                     || videoSrc !== $('#largeVideo').attr('src'))
-                VideoLayout.showDisplayName(container.id, false);
-        }
-    );
+                    VideoLayout.showDisplayName(container.id, false);
+            }
+        );
 
-    // an attempt to work around https://github.com/jitsi/jitmeet/issues/32
-    if (isVideo &&
-        data.peerjid && sess.peerjid === data.peerjid &&
-        data.stream.getVideoTracks().length === 0 &&
-        connection.jingle.localVideo.getVideoTracks().length > 0) {
-        //
-        window.setTimeout(function () {
-            sendKeyframe(sess.peerconnection);
-        }, 3000);
+        // an attempt to work around https://github.com/jitsi/jitmeet/issues/32
+        if (isVideo &&
+            data.peerjid && sess.peerjid === data.peerjid &&
+            data.stream.getVideoTracks().length === 0 &&
+            connection.jingle.localVideo.getVideoTracks().length > 0) {
+            //
+            window.setTimeout(function () {
+                sendKeyframe(sess.peerconnection);
+            }, 3000);
+        }
     }
+
+    waitForPresence();
 });
 
 /**
@@ -581,40 +607,35 @@ $(document).bind('callterminated.jingle', function (event, sid, jid, reason) {
 $(document).bind('setLocalDescription.jingle', function (event, sid) {
     // put our ssrcs into presence so other clients can identify our stream
     var sess = connection.jingle.sessions[sid];
-    var newssrcs = {};
-    var directions = {};
-    var localSDP = new SDP(sess.peerconnection.localDescription.sdp);
-    localSDP.media.forEach(function (media) {
-        var type = SDPUtil.parse_mid(SDPUtil.find_line(media, 'a=mid:'));
+    var newssrcs = [];
+    var simulcast = new Simulcast();
+    var media = simulcast.parseMedia(sess.peerconnection.localDescription);
+    media.forEach(function (media) {
 
-        if (SDPUtil.find_line(media, 'a=ssrc:')) {
-            // assumes a single local ssrc
-            var ssrc = SDPUtil.find_line(media, 'a=ssrc:').substring(7).split(' ')[0];
-            newssrcs[type] = ssrc;
-
-            directions[type] = (
-                SDPUtil.find_line(media, 'a=sendrecv') ||
-                SDPUtil.find_line(media, 'a=recvonly') ||
-                SDPUtil.find_line(media, 'a=sendonly') ||
-                SDPUtil.find_line(media, 'a=inactive') ||
-                'a=sendrecv').substr(2);
-        }
+        // TODO(gp) maybe exclude FID streams?
+        Object.keys(media.sources).forEach(function(ssrc) {
+            newssrcs.push({
+                'ssrc': ssrc,
+                'type': media.type,
+                'direction': media.direction
+            });
+        });
     });
     console.log('new ssrcs', newssrcs);
 
     // Have to clear presence map to get rid of removed streams
     connection.emuc.clearPresenceMedia();
-    var i = 0;
-    Object.keys(newssrcs).forEach(function (mtype) {
-        i++;
-        var type = mtype;
-        // Change video type to screen
-        if (mtype === 'video' && isUsingScreenStream) {
-            type = 'screen';
+
+    if (newssrcs.length > 0) {
+        for (var i = 1; i <= newssrcs.length; i ++) {
+            // Change video type to screen
+            if (newssrcs[i-1].type === 'video' && isUsingScreenStream) {
+                newssrcs[i-1].type = 'screen';
+            }
+            connection.emuc.addMediaToPresence(i,
+                newssrcs[i-1].type, newssrcs[i-1].ssrc, newssrcs[i-1].direction);
         }
-        connection.emuc.addMediaToPresence(i, type, newssrcs[mtype], directions[mtype]);
-    });
-    if (i > 0) {
+
         connection.emuc.sendPresence();
     }
 });

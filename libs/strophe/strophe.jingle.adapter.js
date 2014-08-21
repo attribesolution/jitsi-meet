@@ -169,6 +169,8 @@ TraceablePeerConnection.prototype.setLocalDescription = function (description, s
 
 TraceablePeerConnection.prototype.setRemoteDescription = function (description, successCallback, failureCallback) {
     var self = this;
+    var simulcast = new Simulcast();
+    description = simulcast.transformRemoteDescription(description);
     this.trace('setRemoteDescription', dumpSDP(description));
     this.peerconnection.setRemoteDescription(description,
         function () {
@@ -208,6 +210,16 @@ TraceablePeerConnection.prototype.addSource = function (elem) {
     $(elem).each(function (idx, content) {
         var name = $(content).attr('name');
         var lines = '';
+        tmp = $(content).find('ssrc-group[xmlns="urn:xmpp:jingle:apps:rtp:ssma:0"]').each(function() {
+            var semantics = this.getAttribute('semantics');
+            var ssrcs = $(this).find('>source').map(function () {
+                return this.getAttribute('ssrc');
+            }).get();
+
+            if (ssrcs.length != 0) {
+                lines += 'a=ssrc-group:' + semantics + ' ' + ssrcs.join(' ') + '\r\n';
+            }
+        });
         tmp = $(content).find('>source[xmlns="urn:xmpp:jingle:apps:rtp:ssma:0"]');
         tmp.each(function () {
             var ssrc = $(this).attr('ssrc');
@@ -254,6 +266,16 @@ TraceablePeerConnection.prototype.removeSource = function (elem) {
     $(elem).each(function (idx, content) {
         var name = $(content).attr('name');
         var lines = '';
+        tmp = $(content).find('ssrc-group[xmlns="urn:xmpp:jingle:apps:rtp:ssma:0"]').each(function() {
+            var semantics = this.getAttribute('semantics');
+            var ssrcs = $(this).find('>source').map(function () {
+                return this.getAttribute('ssrc');
+            }).get();
+
+            if (ssrcs.length != 0) {
+                lines += 'a=ssrc-group:' + semantics + ' ' + ssrcs.join(' ') + '\r\n';
+            }
+        });
         tmp = $(content).find('>source[xmlns="urn:xmpp:jingle:apps:rtp:ssma:0"]');
         tmp.each(function () {
             var ssrc = $(this).attr('ssrc');
@@ -413,6 +435,8 @@ TraceablePeerConnection.prototype.createAnswer = function (successCallback, fail
     this.trace('createAnswer', JSON.stringify(constraints, null, ' '));
     this.peerconnection.createAnswer(
         function (answer) {
+            var simulcast = new Simulcast();
+            answer = simulcast.transformAnswer(answer);
             self.trace('createAnswerOnSuccess', dumpSDP(answer));
             successCallback(answer);
         },
