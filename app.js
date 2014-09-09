@@ -133,10 +133,8 @@ function audioStreamReady(stream) {
     startLocalRtpStatsCollector(stream);
 
     if (RTC.browser !== 'firefox') {
-        getUserMediaWithConstraints(['video'],
-                                    videoStreamReady,
-                                    videoStreamFailed,
-                                    config.resolution || '360');
+        var simulcast = new Simulcast();
+        simulcast.getUserVideo(videoStreamReady, videoStreamFailed);
     } else {
         doJoin();
     }

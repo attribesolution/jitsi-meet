@@ -128,7 +128,11 @@ dumpSDP = function(description) {
 if (TraceablePeerConnection.prototype.__defineGetter__ !== undefined) {
     TraceablePeerConnection.prototype.__defineGetter__('signalingState', function() { return this.peerconnection.signalingState; });
     TraceablePeerConnection.prototype.__defineGetter__('iceConnectionState', function() { return this.peerconnection.iceConnectionState; });
-    TraceablePeerConnection.prototype.__defineGetter__('localDescription', function() { return this.peerconnection.localDescription; });
+    TraceablePeerConnection.prototype.__defineGetter__('localDescription', function() {
+        var simulcast = new Simulcast();
+        var publicLocalDescription = simulcast.makeLocalDescriptionPublic(this.peerconnection.localDescription);
+        return publicLocalDescription;
+    });
     TraceablePeerConnection.prototype.__defineGetter__('remoteDescription', function() { return this.peerconnection.remoteDescription; });
 }
 
@@ -149,6 +153,8 @@ TraceablePeerConnection.prototype.createDataChannel = function (label, opts) {
 
 TraceablePeerConnection.prototype.setLocalDescription = function (description, successCallback, failureCallback) {
     var self = this;
+    var simulcast = new Simulcast();
+    description = simulcast.transformLocalDescription(description);
     this.trace('setLocalDescription', dumpSDP(description));
     this.peerconnection.setLocalDescription(description,
         function () {

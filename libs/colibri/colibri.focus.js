@@ -636,9 +636,7 @@ ColibriFocus.prototype.initiate = function (peer, isInitiator) {
     if (this.peerconnection !== null && this.peerconnection.signalingState == 'stable') {
         sdp = new SDP(this.peerconnection.remoteDescription.sdp);
 
-        var simulcast = new Simulcast();
-        var explodedDesc = simulcast.explodeLocalSimulcastSources(this.peerconnection.localDescription);
-        var localSDP = new SDP(explodedDesc.sdp);
+        var localSDP = new SDP(this.peerconnection.localDescription.sdp);
 
         // throw away stuff we don't want
         // not needed with static offer
@@ -1049,6 +1047,9 @@ ColibriFocus.prototype.setRemoteDescription = function (session, elem, desctype)
         {
             if (!remoteSDP.media[channel])
                 remoteSDP.media[channel] = '';
+
+            if (!this.remotessrc[session.peerjid][channel])
+                this.remotessrc[session.peerjid][channel] = '';
 
             this.remotessrc[session.peerjid][channel] +=
                 SDPUtil.find_lines(remoteSDP.media[channel], 'a=ssrc:')
