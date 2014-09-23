@@ -343,3 +343,41 @@
 #mixedstream {
     display:none !important;
 }
+
+#dominant_speaker_identification {
+    background: rgba(255, 255, 255, 0.5);
+    bottom: 0;
+    display: none;
+    height: 100%;
+    left: 0;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+}
+#dominant_speaker_identification_canvas {
+    height: 100%;
+    width: 100%;
+}
+#dominant_speaker_identification_legend {
+    right: 10px;
+    position:absolute;
+    top: 0;
+}
+#dominant_speaker_identification_legend ul {
+    list-style: none;
+}
+#dominant_speaker_identification_legend ul li {
+    display: block;
+    margin-bottom: 5px;
+    padding-left: 25px;
+    position: relative;
+}
+#dominant_speaker_identification_legend ul li span {
+    border-radius: 5px;
+    display: block;
+    height: 100%;
+    left: 0;
+    position: absolute;
+    top: 0;
+    width: 20px;
+}

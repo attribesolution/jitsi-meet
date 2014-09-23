@@ -59,7 +59,7 @@
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
     <link rel="stylesheet" href="css/font.css?v=4"/>
     <link rel="stylesheet" type="text/css" media="screen" href="css/main.css?v=23"/>
-    <link rel="stylesheet" type="text/css" media="screen" href="css/videolayout_default.css?v=10" id="videolayout_default"/>
+    <link rel="stylesheet" type="text/css" media="screen" href="css/videolayout_default.css" id="videolayout_default"/>
     <link rel="stylesheet" href="css/jquery-impromptu.css?v=4">
     <link rel="stylesheet" href="css/modaldialog.css?v=3">
     <link rel="stylesheet" href="css/popup_menu.css?v=2">
@@ -73,6 +73,8 @@
     <script src="libs/jquery-impromptu.js"></script>
     <script src="libs/jquery.autosize.js"></script>
     <script src="libs/prezi_player.js?v=2"></script>
+    <script src="libs/Chart.js"></script>
+    <script src="dominant_speaker_identification.js"></script>
   </head>
   <body>
     <div id="welcome_page">
@@ -274,6 +276,10 @@
                     </a>
                 </span>
             </span>
+            <div id="dominant_speaker_identification">
+                <canvas id="dominant_speaker_identification_canvas"></canvas>
+                <div id="dominant_speaker_identification_legend"></div>
+            </div>
         </div>
         <div id="chatspace">
             <div id="nickname">
