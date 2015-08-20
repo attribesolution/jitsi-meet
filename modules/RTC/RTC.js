@@ -169,19 +169,19 @@ var RTC = {
             onReady();
         }
     },
-    muteRemoteVideoStream: function (jid, value) {
+    muteRemoteStream: function (jid, type, mute) {
         var stream;
 
         if(this.remoteStreams[jid] &&
-            this.remoteStreams[jid][MediaStreamType.VIDEO_TYPE]) {
-            stream = this.remoteStreams[jid][MediaStreamType.VIDEO_TYPE];
+            this.remoteStreams[jid][type]) {
+            stream = this.remoteStreams[jid][type];
         }
 
         if(!stream)
             return true;
 
-        if (value != stream.muted) {
-            stream.setMute(value);
+        if (mute != stream.muted) {
+            stream.setMute(mute);
             return true;
         }
         return false;

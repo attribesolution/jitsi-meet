@@ -544,7 +544,7 @@ var VideoLayout = (function (my) {
      */
     my.onVideoMute = function (jid, value) {
         if (jid !== APP.xmpp.myJid() &&
-            !APP.RTC.muteRemoteVideoStream(jid, value))
+            !APP.RTC.muteRemoteStream(jid, MediaStreamType.VIDEO_TYPE, value))
             return;
 
         if (jid === APP.xmpp.myJid()) {
