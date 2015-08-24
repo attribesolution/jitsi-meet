@@ -177,9 +177,11 @@ var RTC = {
             stream = this.remoteStreams[jid][type];
         }
 
+        console.log("RTC: muting stream for jid="+jid+" mute="+mute);
         if(!stream)
             return true;
 
+        console.log("RTC: stream.muted="+stream.muted);
         if (mute != stream.muted) {
             stream.setMute(mute);
             return true;

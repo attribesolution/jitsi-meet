@@ -149,6 +149,13 @@ module.exports = function(XMPP, eventEmitter) {
                     from, (videoMuted.text() === "true"));
             }
 
+            var pleaseMuteMe = $(pres).find('>pleaseMuteMe');
+            if (pleaseMuteMe.length) {
+                var jid = pleaseMuteMe.attr('jid');
+                if (jid === this.myroomjid)
+                    APP.RTC.muteRemoteStream(from, 'Audio', true);
+            }
+
             var startMuted = $(pres).find('>startmuted');
             if (startMuted.length && Moderator.isPeerModerator(from)) {
                 eventEmitter.emit(XMPPEvents.START_MUTED_SETTING_CHANGED,
@@ -513,6 +520,13 @@ module.exports = function(XMPP, eventEmitter) {
                     .c('current').t(this.presMap['prezicurrent']).up().up();
             }
 
+            var a = false;
+            if (this.presMap['pleaseMuteMe']) {
+                pres.c('pleaseMuteMe', {jid: this.presMap['pleaseMuteMe']}).up();
+                console.log('adding2 please mute me '+this.presMap['pleaseMuteMe']);
+                a=true;
+            }
+
             if(this.presMap["startMuted"] !== undefined)
             {
                 pres.c("startmuted", {audio: this.presMap["startMuted"].audio,
@@ -522,6 +536,8 @@ module.exports = function(XMPP, eventEmitter) {
             }
 
             pres.up();
+            if(a)
+            console.log("sss,", pres);
             this.connection.send(pres);
         },
         addDisplayNameToPresence: function (displayName) {
@@ -586,6 +602,11 @@ module.exports = function(XMPP, eventEmitter) {
         },
         addUserIdToPresence: function (userId) {
             this.presMap['userId'] = userId;
+        },
+        addPleaseMuteMeToPresence: function(jid) {
+            console.log('Adding please mute me '+jid);
+            this.presMap['pleaseMuteMe'] = jid;
+            this.sendPresence();
         },
         addStartMutedToPresence: function (audio, video) {
             this.presMap["startMuted"] = {audio: audio, video: video};

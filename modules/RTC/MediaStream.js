@@ -42,6 +42,10 @@ MediaStream.prototype.getOriginalStream = function() {
 MediaStream.prototype.setMute = function (value) {
     this.stream.muted = value;
     this.muted = value;
+    this.stream.getAudioTracks().forEach(function (track){
+        track.muted = value;
+        track.enabled = !value;
+    });
 };
 
 module.exports = MediaStream;

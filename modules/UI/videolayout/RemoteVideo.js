@@ -1,5 +1,6 @@
 /* global $, APP, require, Strophe, interfaceConfig */
 var ConnectionIndicator = require("./ConnectionIndicator");
+var MediaStreamType = require("../../../service/RTC/MediaStreamTypes");
 var SmallVideo = require("./SmallVideo");
 var AudioLevels = require("../audio_levels/AudioLevels");
 var LargeVideo = require("./LargeVideo");
@@ -8,6 +9,7 @@ var RTCBrowserType = require("../../RTC/RTCBrowserType");
 var UIUtils = require("../util/UIUtil");
 
 function RemoteVideo(peerJid, VideoLayout) {
+    console.log("new RemoteVideo "+peerJid);
     this.peerJid = peerJid;
     this.resourceJid = Strophe.getResourceFromJid(peerJid);
     this.videoSpanId = 'participant_' + this.resourceJid;
@@ -22,6 +24,8 @@ function RemoteVideo(peerJid, VideoLayout) {
     this.container.appendChild(nickfield);
     this.flipX = false;
     this.isLocal = false;
+    this.mutedLocally = false;
+    this.addRemoteVideoMenu(APP.xmpp.isModerator());
 }
 
 RemoteVideo.prototype = Object.create(SmallVideo.prototype);
@@ -29,14 +33,13 @@ RemoteVideo.prototype.constructor = RemoteVideo;
 
 RemoteVideo.prototype.addRemoteVideoContainer = function() {
     this.container = RemoteVideo.createContainer(this.videoSpanId);
-    if (APP.xmpp.isModerator())
-        this.addRemoteVideoMenu();
     AudioLevels.updateAudioLevelCanvas(this.peerJid, this.VideoLayout);
 
     return this.container;
 };
 
 /**
+    this.addRemoteVideoMenu(APP.xmpp.isModerator());
  * Adds the remote video menu element for the given <tt>jid</tt> in the
  * given <tt>parentElement</tt>.
  *
@@ -45,7 +48,8 @@ RemoteVideo.prototype.addRemoteVideoContainer = function() {
  */
 
 if (!interfaceConfig.filmStripOnly) {
-    RemoteVideo.prototype.addRemoteVideoMenu = function () {
+    RemoteVideo.prototype.addRemoteVideoMenu = function (isModerator) {
+        console.log('addRemoteVideoMenu ', isModerator);
         var spanElement = document.createElement('span');
         spanElement.className = 'remotevideomenu';
 
@@ -123,11 +127,43 @@ if (!interfaceConfig.filmStripOnly) {
         ejectMenuItem.appendChild(ejectLinkItem);
         popupmenuElement.appendChild(ejectMenuItem);
 
+        var muteLocallyMenuItem = document.createElement('li');
+        var muteLocallyLinkItem = document.createElement('a');
+        muteLocallyLinkItem.innerHTML = "Mute locally";
+        muteLocallyLinkItem.onclick = function () {
+            self.mutedLocally = !self.mutedLocally;
+            console.log("Setting local mute for "+self.peerJid+" "+self.mutedLocally);
+            APP.RTC.muteRemoteStream(self.peerJid,
+                MediaStreamType.AUDIO_TYPE, self.mutedLocally);
+        };
+
+        muteLocallyMenuItem.appendChild(muteLocallyLinkItem);
+        popupmenuElement.appendChild(muteLocallyMenuItem);
+
+        var markSameRoomMenuItem = document.createElement('li');
+        var markSameRoomLinkItem = document.createElement('a');
+        markSameRoomLinkItem.innerHTML = "Mutual mute";
+        markSameRoomLinkItem.onclick = function () {
+            self.mutedLocally = true;
+            APP.RTC.muteRemoteStream(self.peerJid, MediaStreamType.AUDIO_TYPE, true);
+            var emuc = APP.xmpp.getConnection().emuc;
+            emuc.addPleaseMuteMeToPresence(self.peerJid);
+        };
+
+        markSameRoomMenuItem.appendChild(markSameRoomLinkItem);
+        popupmenuElement.appendChild(markSameRoomMenuItem);
+
         var paddingSpan = document.createElement('span');
         paddingSpan.className = 'popupmenuPadding';
         popupmenuElement.appendChild(paddingSpan);
         APP.translation.translateElement(
             $("#" + popupmenuElement.id + " > li > a > div"));
+
+
+        if (!isModerator) {
+            ejectMenuItem.setAttribute("style", "display:none");
+            muteMenuItem.setAttribute("style", "display:none");
+        }
     };
 
 } else {

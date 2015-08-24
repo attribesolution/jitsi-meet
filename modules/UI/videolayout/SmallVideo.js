@@ -259,6 +259,7 @@ SmallVideo.prototype.updateIconPositions = function () {
  * be added
  */
 SmallVideo.prototype.createModeratorIndicatorElement = function () {
+    return;
     // Show moderator indicator
     var indicatorSpan = $('#' + this.videoSpanId + ' .focusindicator');
 

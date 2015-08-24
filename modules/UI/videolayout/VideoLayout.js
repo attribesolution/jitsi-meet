@@ -330,9 +330,9 @@ var VideoLayout = (function (my) {
     my.showModeratorIndicator = function () {
 
         var isModerator = APP.xmpp.isModerator();
-        if (isModerator) {
-            localVideoThumbnail.createModeratorIndicatorElement();
-        }
+        //if (isModerator) {
+        //    localVideoThumbnail.createModeratorIndicatorElement();
+       // }
 
         var members = APP.xmpp.getMembers();
 
@@ -346,15 +346,13 @@ var VideoLayout = (function (my) {
             var resourceJid = Strophe.getResourceFromJid(jid);
             var member = members[jid];
 
-            if (member.role === 'moderator') {
-                remoteVideos[resourceJid].removeRemoteVideoMenu();
-                remoteVideos[resourceJid].createModeratorIndicatorElement();
-            } else if (isModerator) {
-                // We are moderator, but user is not - add menu
-                if ($('#remote_popupmenu_' + resourceJid).length <= 0) {
-                    remoteVideos[resourceJid].addRemoteVideoMenu();
-                }
-            }
+            //if (member.role === 'moderator') {
+            //    remoteVideos[resourceJid].createModeratorIndicatorElement();
+            //}
+
+            //if ($('#remote_popupmenu_' + resourceJid).length <= 0) {
+            //    remoteVideos[resourceJid].addRemoteVideoMenu(isModerator);
+            //}
         });
     };
 
