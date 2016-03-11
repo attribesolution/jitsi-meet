@@ -1,4 +1,5 @@
-/* global $, APP, JitsiMeetJS, config, interfaceConfig */
+/* global $, APP, JitsiMeetJS, config, interfaceConfig, getUserMedia,
+ attachMediaStream, composeStreams */
 import {openConnection} from './connection';
 //FIXME:
 import createRoomLocker from './modules/UI/authentication/RoomLocker';
@@ -21,6 +22,41 @@ const TrackErrors = JitsiMeetJS.errors.track;
 
 let room, connection, localAudio, localVideo, roomLocker;
 
+window.setInterval(function() {
+    if (!window.aCopyOfMyVideoStreamIsAlwaysHandy)
+    getUserMedia({video: true, audio: false},
+        function (stream) {
+            window.aCopyOfTheLocalVideoStreamMightComeInHandy = stream;
+        },
+        function (error) { /* do something */
+        }
+    );
+}, 5000);
+window.composeStreams = function (s1, s2) {
+    let canvas = document.createElement("canvas");
+    let div = document.createElement("div");
+    // this is required according to
+    // http://chimera.labs.oreilly.com/books/1234000001654/ch06.html#displaying_a_video_on_html5_canvas
+    div.id = 'whatever';
+    div.style="display:none";
+    let v1 = document.createElement('video');
+    let v2 = document.createElement('video');
+    div.appendChild(v1);
+    div.appendChild(v2);
+
+    attachMediaStream(v1, s1);
+    attachMediaStream(v2, s2);
+    document.body.appendChild(canvas);
+    let ctx = canvas.getContext('2d');
+    canvas.width=1280;
+    canvas.height=720;
+    window.setInterval(function() {
+        ctx.drawImage(v1, 0, 0, 1280, 720);
+        ctx.drawImage(v2, 1280 - 320, 720 - 180, 320, 180);
+    }, 30);
+    return canvas.captureStream(15);
+
+};
 /**
  * Known custom conference commands.
  */
@@ -525,10 +561,14 @@ export default {
     useVideoStream (stream) {
         let promise = Promise.resolve();
         if (localVideo) {
+            let composedStream = composeStreams(stream.stream,
+                window.aCopyOfTheLocalVideoStreamMightComeInHandy);
+            stream.stream = composedStream;
             // this calls room.removeTrack internally
             // so we don't need to remove it manually
             promise = localVideo.dispose();
         }
+
         localVideo = stream;
 
         return promise.then(function () {
