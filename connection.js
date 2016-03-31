@@ -22,7 +22,7 @@ function checkForAttachParametersAndConnect(id, password, connection) {
         // When connection optimization is not deployed or enabled the default
         // value will be window.XMPPAttachInfo.status = "error"
         // If the connection optimization is deployed and enabled and there is
-        // a failure the value will be window.XMPPAttachInfo.status = "error" 
+        // a failure the value will be window.XMPPAttachInfo.status = "error"
         if(window.XMPPAttachInfo.status === "error") {
             connection.connect({id, password});
             return;
@@ -50,7 +50,6 @@ function checkForAttachParametersAndConnect(id, password, connection) {
  * everything is ok, else error.
  */
 function connect(id, password, roomName) {
-
     let connectionConfig = config;
 
     connectionConfig.bosh += '?room=' + roomName;

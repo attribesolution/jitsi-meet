@@ -64,21 +64,18 @@ const APP = {
 };
 
 function init() {
-    var isUIReady = APP.UI.start();
-    if (isUIReady) {
-        APP.conference.init({roomName: buildRoomName()}).then(function () {
-            APP.UI.initConference();
+    APP.conference.init({roomName: buildRoomName()}).then(function () {
+        APP.UI.initConference();
 
-            APP.UI.addListener(UIEvents.LANG_CHANGED, function (language) {
-                APP.translation.setLanguage(language);
-                APP.settings.setLanguage(language);
-            });
-
-            APP.keyboardshortcut.init();
-        }).catch(function (err) {
-            console.error(err);
+        APP.UI.addListener(UIEvents.LANG_CHANGED, function (language) {
+            APP.translation.setLanguage(language);
+            APP.settings.setLanguage(language);
         });
-    }
+
+        APP.keyboardshortcut.init();
+    }).catch(function (err) {
+        console.error(err);
+    });
 }
 
 /**
@@ -98,8 +95,6 @@ function obtainConfigAndInit() {
             // Get config result callback
             function(success, error) {
                 if (success) {
-                    console.log("(TIME) configuration fetched:\t",
-                                window.performance.now());
                     init();
                 } else {
                     // Show obtain config error,
@@ -111,23 +106,19 @@ function obtainConfigAndInit() {
     } else {
         require("./modules/config/BoshAddressChoice").chooseAddress(
             config, roomName);
-
         init();
     }
 }
 
 
+URLProcessor.setConfigParametersFromUrl();
+APP.init();
+APP.translation.init(settings.getLanguage());
+obtainConfigAndInit();
+APP.API.init();
+
 $(document).ready(function () {
     console.log("(TIME) document ready:\t", window.performance.now());
-
-    URLProcessor.setConfigParametersFromUrl();
-    APP.init();
-
-    APP.translation.init(settings.getLanguage());
-
-    APP.API.init();
-
-    obtainConfigAndInit();
 });
 
 $(window).bind('beforeunload', function () {

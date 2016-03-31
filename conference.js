@@ -330,6 +330,14 @@ export default {
             console.log('initialized with %s local tracks', tracks.length);
             connection = con;
             this._createRoom(tracks);
+
+            // XXX The API will take care of disconnecting from the XMPP server
+            // (and, thus, leaving the room) on unload.
+            var res = new Promise((resolve, reject) => {
+                (new ConferenceConnector(resolve, reject)).connect();
+            });
+
+            APP.UI.start();
             this.isDesktopSharingEnabled =
                 JitsiMeetJS.isDesktopSharingEnabled();
 
@@ -340,11 +348,7 @@ export default {
                     devices => APP.UI.onAvailableDevicesChanged(devices)
                 );
             }
-            // XXX The API will take care of disconnecting from the XMPP server
-            // (and, thus, leaving the room) on unload.
-            return new Promise((resolve, reject) => {
-                (new ConferenceConnector(resolve, reject)).connect();
-            });
+            return res;
         });
     },
     /**
