@@ -26,6 +26,8 @@ target 'JitsiMeet' do
   pod 'Folly',
     :podspec => '../node_modules/react-native/third-party-podspecs/Folly.podspec'
 
+  pod 'ObjectiveDropboxOfficial'
+
   pod 'react-native-background-timer',
     :path => '../node_modules/react-native-background-timer'
   pod 'react-native-fast-image',
@@ -41,6 +43,7 @@ target 'JitsiMeet' do
   pod 'RNVectorIcons', :path => '../node_modules/react-native-vector-icons'
   pod 'react-native-calendar-events',
     :path => '../node_modules/react-native-calendar-events'
+
 end
 
 post_install do |installer|

@@ -9,3 +9,5 @@ export { default as NavigateSectionListSectionHeader }
 export { default as SectionList } from './SectionList';
 export { default as Text } from './Text';
 export { default as Watermarks } from './Watermarks';
+export { default as LoadingIndicator } from './LoadingIndicator';
+export { default as Switch } from './Switch';

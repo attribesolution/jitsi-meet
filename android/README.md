@@ -491,3 +491,30 @@ Picture-in-Picture style scenario, in a rectangle too small to accommodate its
 Jitsi Meet SDK automatically enables (unless explicitly disabled by a
 `setPictureInPictureEnabled(false)` call) Android's native Picture-in-Picture
 mode iff the platform is supported i.e. Android >= Oreo.
+
+## Dropbox integration
+
+To setup the dropbox integration you need to do the following steps:
+1. Add the following section to the AndroidManifest and change `<APP_KEY>` to your dropbox app key:
+```
+<activity
+    android:name="com.dropbox.core.android.AuthActivity"
+    android:configChanges="orientation|keyboard"
+    android:launchMode="singleTask">
+  <intent-filter>
+
+    <!-- Change this to be db- followed by your app key -->
+    <data android:scheme="db-<APP_KEY>" />
+
+    <action android:name="android.intent.action.VIEW" />
+
+    <category android:name="android.intent.category.BROWSABLE" />
+    <category android:name="android.intent.category.DEFAULT" />
+  </intent-filter>
+</activity>
+```
+
+2. Add your dropbox app key to the strings.xml file:
+```
+<string name="dropbox_app_key"></string>
+```

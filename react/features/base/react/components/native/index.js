@@ -14,3 +14,4 @@ export { default as SideBar } from './SideBar';
 export { default as Text } from './Text';
 export { default as SectionList } from './SectionList';
 export { default as TintedView } from './TintedView';
+export { default as Switch } from './Switch';

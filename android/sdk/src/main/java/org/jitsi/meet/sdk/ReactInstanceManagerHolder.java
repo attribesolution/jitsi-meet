@@ -24,6 +24,7 @@ import com.facebook.react.bridge.NativeModule;
 import com.facebook.react.bridge.ReactContext;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.common.LifecycleState;
+import org.jitsi.meet.sdk.dropbox.Dropbox;
 
 import java.util.Arrays;
 import java.util.List;
@@ -41,6 +42,7 @@ class ReactInstanceManagerHolder {
             new AndroidSettingsModule(reactContext),
             new AppInfoModule(reactContext),
             new AudioModeModule(reactContext),
+            new Dropbox(reactContext),
             new ExternalAPIModule(reactContext),
             new PictureInPictureModule(reactContext),
             new ProximityModule(reactContext),

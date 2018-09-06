@@ -171,6 +171,10 @@ var config = {
 
     // Whether to enable file recording or not.
     // fileRecordingsEnabled: false,
+    // Enable the dropbox integration.
+    // dropbox: {
+    //     clientId: '<APP_ID>' // Specify your app ID here.
+    // },
 
     // Whether to enable live streaming or not.
     // liveStreamingEnabled: false,
@@ -367,6 +371,12 @@ var config = {
     //     format: 'flac'
     //
 
+    // }
+
+    // dropbox: {
+    //     // Replace <APP_ID> with your dropbox application ID to enable the
+    //     // dropbox integration.
+    //     clientId: "<APP_ID>"
     // }
 
     // Options related to end-to-end (participant to participant) ping.
