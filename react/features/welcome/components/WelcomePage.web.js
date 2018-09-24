@@ -147,7 +147,7 @@ class WelcomePage extends AbstractWelcomePage {
                                     isLabelHidden = { true }
                                     label = 'enter_room_field'
                                     onChange = { this._onRoomChange }
-                                    placeholder = { this.state.roomPlaceholder }
+                                    placeholder = 'Enter meeting space'
                                     shouldFitContainer = { true }
                                     type = 'text'
                                     value = { this.state.room } />

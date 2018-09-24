@@ -51,7 +51,7 @@
             "join": "Tap to join",
             "roomname": "Enter room name"
         },
-        "appDescription": "Go ahead, video chat with the whole team. In fact, invite everyone you know. __app__ is a fully encrypted, 100% open source video conferencing solution that you can use all day, every day, for free — with no account needed.",
+        "appDescription": "Go ahead, video chat with the whole team. In fact, invite everyone you know. __app__ is a fully encrypted video conferencing solution that you can use all day, every day",
         "audioVideoSwitch": {
             "audio": "Voice",
             "video": "Video"
@@ -68,7 +68,7 @@
         "roomnameHint": "Enter the name or URL of the room you want to join. You may make a name up, just let the people you are meeting know it so that they enter the same name.",
         "sendFeedback": "Send feedback",
         "terms": "Terms",
-        "title": "More secure, more flexible, and completely free video conferencing."
+        "title": "Secure, Simple and Scalable Video Conferences"
     },
     "startupoverlay": {
         "policyText": " ",
@@ -650,7 +650,7 @@
     },
     "calendarSync": {
         "addMeetingURL": "Add a meeting link",
-        "confirmAddLink": "Do you want to add a Jitsi link to this event?",
+        "confirmAddLink": "Do you want to add a Attribe link to this event?",
         "confirmAddLinkTitle": "Calendar",
         "join": "Join",
         "joinTooltip": "Join the meeting",
@@ -700,7 +700,7 @@
         "answer": "Answer",
         "audioCallTitle": "Incoming call",
         "decline": "Dismiss",
-        "productLabel": "from Jitsi Meet",
+        "productLabel": "from Attribe Meet",
         "videoCallTitle": "Incoming video call"
     },
     "localRecording": {
