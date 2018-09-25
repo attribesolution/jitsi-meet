@@ -51,7 +51,7 @@
             "join": "Tap to join",
             "roomname": "Enter room name"
         },
-        "appDescription": "Go ahead, video chat with the whole team. In fact, invite everyone you know. __app__ is a simple, secure and scalable video conferencing solution that you can use all day, every day",
+        "appDescription": "Go ahead, video chat with the whole team. In fact, invite everyone you know. __app__ is a fully encrypted video conferencing solution that you can use all day, every day",
         "audioVideoSwitch": {
             "audio": "Voice",
             "video": "Video"
@@ -68,7 +68,7 @@
         "roomnameHint": "Enter the name or URL of the room you want to join. You may make a name up, just let the people you are meeting know it so that they enter the same name.",
         "sendFeedback": "Send feedback",
         "terms": "Terms",
-        "title": "Attribes Video Services"
+        "title": "Attribes Simple, Secure and scalable Video Confereremcing platform"
     },
     "startupoverlay": {
         "policyText": " ",
