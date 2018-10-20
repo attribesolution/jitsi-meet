@@ -125,6 +125,20 @@ class Conference extends Component<Props> {
     }
 
     /**
+     * Implements React 's {@link Component#componentWillMount()}. Invoked
+     * immediately before this component is mounted.
+     *
+     * @inheritdoc
+     * @returns {void}
+     */
+    componentWillMount() {
+        if (!localStorage.getItem('token')) {
+            console.log('Hello world');
+            window.location.href = 'meet.attribes.com/login';
+        }
+    }
+
+    /**
      * Start the connection and get the UI ready for the conference.
      *
      * @inheritdoc

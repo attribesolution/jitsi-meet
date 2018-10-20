@@ -74,6 +74,23 @@ class WelcomePage extends AbstractWelcomePage {
         this._onTabSelected = this._onTabSelected.bind(this);
     }
 
+
+    /**
+     * Implements React 's {@link Component#componentWillMount()}. Invoked
+     * immediately before this component is mounted.
+     *
+     * @inheritdoc
+     * @returns {void}
+     */
+    componentWillMount() {
+        if (!localStorage.getItem('token')) {
+            console.log('Hello world');
+
+            window.location.href = 'meet.attribes.com/login';
+
+        }
+    }
+
     /**
      * Implements React's {@link Component#componentDidMount()}. Invoked
      * immediately after this component is mounted.
