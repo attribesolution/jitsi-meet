@@ -86,7 +86,7 @@ class WelcomePage extends AbstractWelcomePage {
         if (!localStorage.getItem('token')) {
             console.log('Hello world');
 
-            window.location.href = 'https://meetauth.attribes.com';
+            window.location.href = 'http://meetauth.attribes.com';
 
         }
     }
