@@ -134,7 +134,7 @@ class Conference extends Component<Props> {
     componentWillMount() {
         if (!localStorage.getItem('token')) {
             console.log('Hello world');
-            window.location.href = 'https://meet.attribes.com/login';
+            window.location.href = 'https://meetauth.attribes.com';
         }
     }
 
